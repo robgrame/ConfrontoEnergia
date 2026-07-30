@@ -15,7 +15,8 @@
 [![MCP](https://img.shields.io/badge/MCP-Model_Context_Protocol-000000?logo=anthropic&logoColor=white)](https://modelcontextprotocol.io/)
 [![Bootstrap](https://img.shields.io/badge/Bootstrap-5.3-7952B3?logo=bootstrap&logoColor=white)](https://getbootstrap.com/)
 [![QuestPDF](https://img.shields.io/badge/QuestPDF-report-CC0000)](https://www.questpdf.com/)
-[![xUnit](https://img.shields.io/badge/test-485_passing-2ea44f?logo=xunit&logoColor=white)](#-test)
+[![Versione](https://img.shields.io/badge/versione-1.11.260730-0f766e)](https://confrontoenergia.it)
+[![xUnit](https://img.shields.io/badge/test-724_passing-2ea44f?logo=xunit&logoColor=white)](#-test)
 [![Dati](https://img.shields.io/badge/dati-ARERA_Open_Data-004990)](https://www.ilportaleofferte.it/)
 [![Indipendente](https://img.shields.io/badge/100%25-indipendente_·_no_ads-e83e8c)](https://confrontoenergia.it/chi-siamo.html)
 
@@ -50,6 +51,9 @@ istituzionale e pieno di frizioni. Il valore aggiunto qui è tutto **attorno** a
 | Non sa qual è la tua offerta attuale | 💸 La estrae → confronto "quanto risparmi davvero" |
 | Condizioni contrattuali in legalese | ⚠️ Segnalazione automatica delle offerte **limitanti** |
 | Filtri a form rigidi | 💬 Ricerca in **linguaggio naturale** |
+| Difficile valutare fisso contro variabile | 📉 Scenari deterministici su consumo e PUN/PSV |
+| Il contratto è difficile da confrontare | 📑 Passaporto con condizioni, scadenze ed evidenze |
+| Dopo il cambio non sai cosa controllare | ✅ Verifica prima bolletta, reclami e Conciliazione |
 | Nessuna lettura d'insieme dei consumi | 📈 **Resoconto annuale** con grafici e PDF |
 | Chiuso ai programmi | 🤖 **Server MCP** pubblico: lo interroga anche un assistente AI |
 
@@ -67,7 +71,12 @@ https://www.ilportaleofferte.it/portaleOfferte/resources/opendata/csv/offerteML/
 - `E` = energia elettrica (~3.500 offerte/giorno, ~20 MB), `G` = gas
 - Namespace `http://www.acquirenteunico.it/schemas/SII_AU/OffertaRetail/01`, elemento ripetuto `offerta`
 - Parsing **streaming** (`XmlReader`) per non caricare in memoria l'intero file
-- Cache giornaliera in-process con fallback al listino del giorno prima se il file non è ancora pubblicato
+- Il worker salva una copia compressa del catalogo e uno **snapshot immutabile** con
+  hash SHA-256, data fonte, versione del parser e licenza
+- Il portale continua a usare l'ultima fotografia ufficiale valida durante le
+  indisponibilità ARERA e mostra sempre la data del listino
+- Il CSV scaricato manualmente dal **Portale Consumi** viene elaborato solo nel browser:
+  granularità reale, buchi segnalati, nessuna interpolazione e nessun upload
 
 ## 🧮 Metodologia di calcolo
 
@@ -82,12 +91,22 @@ spesaVenditoreAnnua = Σ quote fisse (€/anno) + (Σ componenti €/kWh) × con
 - Un'offerta può avere **più** componenti €/kWh (es. corrispettivo energia + mercato capacità): vengono **sommate**.
 - Per le offerte **variabili** il prezzo è lo *spread* su PUN/PSV; il parametro `prezzoMateriaPrima` permette di stimare la bolletta totale indicativa.
 - Le bollette **infra-annuali** (bimestrali, trimestrali) vengono annualizzate sul periodo realmente coperto, non moltiplicate a occhio.
+- Ogni regola su diritti, bonus e vulnerabilità mostra la **fonte normativa** distinta
+  dalla guida operativa; soglie e criteri temporali dichiarano la loro validità.
 
 ## 🧩 Cosa offre
 
 | | Cosa | Dove |
 |---|---|---|
 | 🌐 | **Portale web** — confronto, upload bollette, resoconto annuale, PDF | [confrontoenergia.it](https://confrontoenergia.it) |
+| 💬 | **Copilota** — ricerca guidata, spiegazioni e fonti delle offerte | [confrontoenergia.it](https://confrontoenergia.it) |
+| 📉 | **Scenari** — what-if deterministico su consumi e indice PUN/PSV | [confrontoenergia.it](https://confrontoenergia.it) |
+| 📑 | **Passaporto del contratto** — condizioni, scadenze, evidenze e confronto | [confrontoenergia.it](https://confrontoenergia.it/#contratto) |
+| ✅ | **Verifica prima bolletta** — prezzo, quota fissa e spesa materia contro il contratto | [confrontoenergia.it](https://confrontoenergia.it/#contratto) |
+| 📊 | **Import Portale Consumi** — CSV locale, granularità reale e profilo annuale | [confrontoenergia.it](https://confrontoenergia.it) |
+| 🧭 | **Cambio e diritti** — ripensamento, reclamo e percorso Conciliazione | [confrontoenergia.it](https://confrontoenergia.it/#diritti) |
+| 🛡️ | **Bonus e vulnerabilità** — orientamento con norme e fonti ARERA datate | [confrontoenergia.it](https://confrontoenergia.it/#tutele) |
+| ⚡ | **Simulatore casa elettrica** — pompa di calore, induzione, EV e autoconsumo | [confrontoenergia.it](https://confrontoenergia.it/#casa-elettrica) |
 | 🔌 | **API REST** — gli stessi calcoli, via HTTP | [api.confrontoenergia.it](https://confrontoenergia.it/api.html) |
 | 🤖 | **Server MCP** — 4 strumenti per assistenti AI | `https://api.confrontoenergia.it/mcp` |
 | 📰 | **Novità** — cosa decide ARERA, spiegato a chi paga la bolletta | [confrontoenergia.it/notizie.html](https://confrontoenergia.it/notizie.html) |
@@ -131,6 +150,7 @@ Accesso con chiave via API Management (quote e rate limit). Configurazione clien
 | `GET` | `/api/stato` | Offerte in cache e data del listino |
 | `GET` | `/api/capabilities` | Se OCR e narrativa AI sono disponibili |
 | `POST` | `/api/confronto` | 🧮 Confronto strutturato (core deterministico) |
+| `POST` | `/api/scenari` | 📉 What-if deterministico su consumi e PUN/PSV |
 | `POST` | `/api/chiedi` | 💬 Ricerca in linguaggio naturale |
 | `POST` | `/api/consulenza` | 🧭 Lettura ragionata del profilo di consumo |
 | `POST` | `/api/profilo-da-bolletta` | Estrazione profilo da testo bolletta |
@@ -141,6 +161,9 @@ Accesso con chiave via API Management (quote e rate limit). Configurazione clien
 | `GET` | `/api/report-stato/{id}` | Stato del lavoro asincrono |
 | `POST` | `/api/report-testo` · `/api/report-manuale` | Resoconto da testo o da dati inseriti a mano |
 | `POST` | `/api/report-pdf` | 🖨️ Resoconto in PDF (QuestPDF) |
+| `POST` | `/api/contratto/analizza-testo` · `/api/contratto/analizza-upload` | 📑 Passaporto del contratto con evidenze |
+| `POST` | `/api/contratto/confronta` | 🔎 Confronto del contratto confermato con il catalogo |
+| `POST` | `/api/contratto/verifica-bolletta-testo` · `/api/contratto/verifica-bolletta-upload` | ✅ Prima bolletta contro contratto |
 | `GET` | `/api/notizie` · `/api/notizie/{slug}` | 📰 Novità pubblicate |
 | `GET` | `/notizie/{slug}` | Pagina della notizia (resa lato server, con JSON-LD) |
 | `GET` `POST` | `/api/admin/notizie/…` | 🔒 Bozze, pubblicazione, scarto (header `X-Admin-Key`) |
@@ -169,6 +192,7 @@ vault e configurazione sarebbe un costo fisso senza alcun beneficio.
 | Risorsa | SKU / Tipo | Ruolo |
 |---|---|---|
 | 🖥️ App Service (Linux) | .NET 10 | Portale + API + MCP |
+| 🧪 Deployment slot | Beta | Build, test e smoke automatici delle feature |
 | ⚙️ App Service (Linux) | .NET 10 | Consumatore della coda dei resoconti |
 | 📦 App Service Plan | P0v3 Linux | Calcolo condiviso con gli altri portali |
 | 🚪 API Management | Developer | Chiavi, quote e dominio `api.confrontoenergia.it` |
@@ -215,7 +239,8 @@ applicativa non deve essere l'unica garanzia su dati di questo tipo.
 
 ## 🧪 Test
 
-**485 test automatici**, tutti verdi a ogni modifica. Non coprono solo il calcolo:
+**724 test automatici**, tutti verdi a ogni modifica, più test Node per i moduli
+browser-only. Non coprono solo il calcolo:
 presidiano anche le promesse fatte all'utente — che ogni pagina dichiari indipendenza e
 assenza di pubblicità, che nessuna pagina serva script di tracciamento, che il testo del
 piè di pagina resti **leggibile** (contrasto WCAG calcolato dai colori dichiarati nel CSS,
@@ -240,6 +265,10 @@ Alcuni esempi di ciò che viene verificato a ogni rilascio:
   la navigazione.
 - ⏱️ **Bollette caricate**: usate solo per produrre il tuo resoconto, poi cancellate;
   al massimo 24 ore in un'area di transito cifrata.
+- 📑 **Contratto e prima bolletta**: elaborati nella singola richiesta; le evidenze
+  tornano al browser e non diventano un archivio personale.
+- 🧭 **Portale Consumi, reclami, bonus e simulatore casa elettrica**: elaborazione
+  interamente nel browser, senza invio al server o persistenza locale.
 - 🤝 **Mai condivise**: nessun dato va a fornitori di energia, intermediari o broker di contatti.
 - ✍️ Chi preferisce non caricare nulla può **inserire i dati a mano** e ottenere lo stesso risultato.
 
@@ -266,6 +295,8 @@ ConfrontoEnergia.Core/              🧠 logica di dominio, condivisa fra API e 
                 ServizioReport / ServizioReportPdf   resoconto annuale
                 ConsulenteEnergetico / AnalizzatoreConsulenza   lettura ragionata
                 ServizioNarrativa           narrativa AI
+  Contratti/    EstrattoreContratto, ServizioPassaportoContratto,
+                VerificatorePrimaBolletta   evidenze e controlli deterministici
   Elaborazione/ ArchivioLavori, coda e stato dell'elaborazione asincrona
   Notizie/      FonteArera                  lettura dei comunicati ufficiali
                 GeneratoreNotizie           spiegazione AI + verifica delle cifre
@@ -273,11 +304,13 @@ ConfrontoEnergia.Core/              🧠 logica di dominio, condivisa fra API e 
 
 ConfrontoEnergia.Api/               🌐 portale e API pubblica
   StrumentiMcp/ StrumentiConfronto, StrumentiCatalogo   strumenti del server MCP
+  EndpointContratto  passaporto, confronto e verifica prima bolletta
   EndpointNotizie   rotte pubbliche e amministrative delle Novità
   Pagine/       modelli HTML resi lato server (fuori da wwwroot, non indicizzabili)
   PagineSeo     sostituzione dei segnaposto nelle pagine statiche
   Program       endpoint Minimal API
-  wwwroot/      portale statico (Bootstrap 5, Chart.js)
+  wwwroot/      portale statico e moduli locali (Portale Consumi, diritti,
+                tutele e simulatore casa elettrica)
 
 ConfrontoEnergia.Worker/            ⚙️ coda degli upload multipli + monitoraggio ARERA
 ```
