@@ -11,12 +11,13 @@
 [![C#](https://img.shields.io/badge/C%23-14-239120?logo=csharp&logoColor=white)](https://learn.microsoft.com/dotnet/csharp/)
 [![Azure](https://img.shields.io/badge/Azure-App_Service-0078D4?logo=microsoftazure&logoColor=white)](https://azure.microsoft.com/)
 [![Azure OpenAI](https://img.shields.io/badge/Azure_OpenAI-GPT-412991?logo=openai&logoColor=white)](https://azure.microsoft.com/products/ai-services/openai-service)
+[![Content Safety](https://img.shields.io/badge/Azure_AI-Content_Safety-0078D4?logo=microsoftazure&logoColor=white)](https://learn.microsoft.com/azure/ai-services/content-safety/overview)
 [![Document Intelligence](https://img.shields.io/badge/Document_Intelligence-OCR-0078D4?logo=microsoftazure&logoColor=white)](https://azure.microsoft.com/products/ai-services/ai-document-intelligence)
 [![MCP](https://img.shields.io/badge/MCP-Model_Context_Protocol-000000?logo=anthropic&logoColor=white)](https://modelcontextprotocol.io/)
 [![Bootstrap](https://img.shields.io/badge/Bootstrap-5.3-7952B3?logo=bootstrap&logoColor=white)](https://getbootstrap.com/)
 [![QuestPDF](https://img.shields.io/badge/QuestPDF-report-CC0000)](https://www.questpdf.com/)
-[![Versione](https://img.shields.io/badge/versione-1.11.260730-0f766e)](https://confrontoenergia.it)
-[![xUnit](https://img.shields.io/badge/test-724_passing-2ea44f?logo=xunit&logoColor=white)](#-test)
+[![Versione](https://img.shields.io/badge/versione-1.12.260731-0f766e)](https://confrontoenergia.it)
+[![xUnit](https://img.shields.io/badge/test-736_passing-2ea44f?logo=xunit&logoColor=white)](#-test)
 [![Dati](https://img.shields.io/badge/dati-ARERA_Open_Data-004990)](https://www.ilportaleofferte.it/)
 [![Indipendente](https://img.shields.io/badge/100%25-indipendente_·_no_ads-e83e8c)](https://confrontoenergia.it/chi-siamo.html)
 
@@ -98,7 +99,7 @@ spesaVenditoreAnnua = Σ quote fisse (€/anno) + (Σ componenti €/kWh) × con
 
 | | Cosa | Dove |
 |---|---|---|
-| 🌐 | **Portale web** — confronto, upload bollette, resoconto annuale, PDF | [confrontoenergia.it](https://confrontoenergia.it) |
+| 🌐 | **Portale web a percorsi** — comparatore subito visibile e strumenti organizzati per obiettivo | [confrontoenergia.it](https://confrontoenergia.it) |
 | 💬 | **Copilota** — ricerca guidata, spiegazioni e fonti delle offerte | [confrontoenergia.it](https://confrontoenergia.it) |
 | 📉 | **Scenari** — what-if deterministico su consumi e indice PUN/PSV | [confrontoenergia.it](https://confrontoenergia.it) |
 | 📑 | **Passaporto del contratto** — condizioni, scadenze, evidenze e confronto | [confrontoenergia.it](https://confrontoenergia.it/#contratto) |
@@ -148,7 +149,7 @@ Accesso con chiave via API Management (quote e rate limit). Configurazione clien
 |---|---|---|
 | `GET` | `/health` | Stato del servizio |
 | `GET` | `/api/stato` | Offerte in cache e data del listino |
-| `GET` | `/api/capabilities` | Se OCR e narrativa AI sono disponibili |
+| `GET` | `/api/capabilities` | Disponibilità di OCR, funzioni AI e Content Safety |
 | `POST` | `/api/confronto` | 🧮 Confronto strutturato (core deterministico) |
 | `POST` | `/api/scenari` | 📉 What-if deterministico su consumi e PUN/PSV |
 | `POST` | `/api/chiedi` | 💬 Ricerca in linguaggio naturale |
@@ -200,7 +201,7 @@ vault e configurazione sarebbe un costo fisso senza alcun beneficio.
 | 🔐 Key Vault | RBAC | Segreti e certificati |
 | 💾 Storage | StorageV2 | Contenitori bollette e resoconti, coda dei lavori |
 | 🌍 DNS | zona `confrontoenergia.it` | Record del sito e della posta |
-| 🧠 AI | Azure AI Services | Document Intelligence (OCR) + OpenAI (narrativa) |
+| 🧠 AI | Azure AI Services | Document Intelligence, OpenAI e Content Safety |
 
 > I nomi delle risorse e gli identificativi di sottoscrizione sono volutamente omessi:
 > l'infrastruttura è condivisa con altri portali e pubblicarne i nomi non aggiunge nulla
@@ -221,6 +222,10 @@ per un servizio che riceve bollette non era accettabile.
   Nessuna chiave condivisa: `disableLocalAuth` sulla risorsa AI.
 - `DefaultAzureCredential` lato codice: Managed Identity in Azure, credenziali
   sviluppatore in locale.
+- **Azure AI Content Safety prima del modello**: Prompt Shields intercetta tentativi
+  diretti e istruzioni incorporate nei documenti; la moderazione controlla le categorie
+  di rischio. Se il servizio di sicurezza non risponde, la generazione non parte e i
+  percorsi documentali ricadono sui motori deterministici.
 - 🔁 I certificati TLS di `api.confrontoenergia.it` sono rinnovati da un **runbook
   Azure Automation** (Posh-ACME + DNS-01 su Azure DNS); i domini del sito usano i
   certificati gestiti di App Service.
@@ -239,7 +244,7 @@ applicativa non deve essere l'unica garanzia su dati di questo tipo.
 
 ## 🧪 Test
 
-**724 test automatici**, tutti verdi a ogni modifica, più test Node per i moduli
+**736 test automatici**, tutti verdi a ogni modifica, più test Node per i moduli
 browser-only. Non coprono solo il calcolo:
 presidiano anche le promesse fatte all'utente — che ogni pagina dichiari indipendenza e
 assenza di pubblicità, che nessuna pagina serva script di tracciamento, che il testo del
@@ -255,6 +260,8 @@ Alcuni esempi di ciò che viene verificato a ogni rilascio:
 - un'offerta riservata a certe zone non viene proposta a chi non può sottoscriverla;
 - una notizia che contiene una cifra assente dal comunicato ARERA di partenza viene
   **scartata**, non corretta a mano.
+- prompt injection dirette e istruzioni malevole incorporate in bollette o contratti
+  vengono bloccate prima di raggiungere il modello.
 
 ## 🔐 Privacy
 
@@ -295,6 +302,7 @@ ConfrontoEnergia.Core/              🧠 logica di dominio, condivisa fra API e 
                 ServizioReport / ServizioReportPdf   resoconto annuale
                 ConsulenteEnergetico / AnalizzatoreConsulenza   lettura ragionata
                 ServizioNarrativa           narrativa AI
+                SicurezzaContenuti           Prompt Shields, moderazione e fail-safe
   Contratti/    EstrattoreContratto, ServizioPassaportoContratto,
                 VerificatorePrimaBolletta   evidenze e controlli deterministici
   Elaborazione/ ArchivioLavori, coda e stato dell'elaborazione asincrona
